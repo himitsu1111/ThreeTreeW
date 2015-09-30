@@ -440,17 +440,21 @@ void __fastcall TForm1::N2Click(TObject *Sender)  //ОТКРЫТЬ++++++++++++++++++
 
 		//третья группа нодов ТВ2
 		//остановился тут 4.09.2015++++++++++++++++
-        while (siblingNode)
+		TTreeNode* childNode;
+		for (siblingNode = TreeView2->Items->GetFirstNode(); siblingNode; siblingNode = siblingNode->getNextSibling())
 		{
-			BuildNode("select Naim from Strukt_2 where id IN(select id_S2 from Strukturs where id_Inv=(select id from INV where I_N='"
-					  + TreeView1->GetNodeAt(K,Z)->Text + "') and id_S1=(select id from Strukt where Naim='"
-					  + siblingNode->Text + "'))",
-					  "Naim",
-					  siblingNode,
-					  TreeView2,
-					  2,
-					  ABSQuery1);
-			siblingNode = siblingNode->getNextSibling();
+			childNode = siblingNode->getFirstChild();
+			while (childNode)
+			{
+				BuildNode("select Naim from Strukt_3 where id in(select id_S3 from Strukturs_23 where id_strukturs in(select id from Strukturs where id_S1=(select id from Strukt where Naim='"
+						  + siblingNode->Text + "') and id_Inv in(select id from INV where I_N ='" + TreeView1->GetNodeAt(K,Z)->Text + "')) and id_S2=(select id from Strukt_2 where Naim='" + childNode->Text + "'))",
+						  "Naim",
+						  childNode,
+						  TreeView2,
+						  3,
+						  ABSQuery1);
+				childNode = childNode->getNextSibling();
+			}
 		}
 
 		//новая часть с 10.08.2015+++++++++
@@ -1319,8 +1323,8 @@ void __fastcall TForm1::Button6Click(TObject *Sender)//ОТМЕНА/СБРОС ВСЕГО в ТВ-2
 void __fastcall TForm1::Button5Click(TObject *Sender)
 {
 	//добавление в таблицы от ТриВью2+++++++++++++++++++++++++++++++++++++++
-	
-	String prev_node = TreeView2->Selected->Parent->Text; //ноды 1й группы, для SQL запроса. ОШИБКА ТУТ!!!
+
+	 
 	NomerGrupp = TreeView2->Selected->SelectedIndex;
 
 	switch (NomerGrupp)
@@ -1339,11 +1343,13 @@ void __fastcall TForm1::Button5Click(TObject *Sender)
 			   }
 			break;
 		case 2:{
+				String prev_node = TreeView2->Selected->Parent->Text;
+				//ноды 1й группы, для SQL запроса. !!!
                 ABSQuery1->SQL->Clear();
 				ABSQuery1->SQL->Text =
 "INSERT INTO Strukturs_23 (id_strukturs, id_S2, id_S3) values ((select id from Strukturs where id_Inv=(select id from INV where I_N='"
 				+ Metka->Text + "') and id_S2=(select id from Strukt_2 where Naim='"
-				+ TreeView2->Selected->Text + "') and (select id from Strukt where Naim='" + prev_node + "')), (select id from Strukt_2 where Naim='"
+				+ TreeView2->Selected->Text + "') and id_S1=(select id from Strukt where Naim='" + prev_node + "')), (select id from Strukt_2 where Naim='"
 				+ TreeView2->Selected->Text + "'), (select id from Strukt_3 where Naim='" + ComboBox2->Text + "'))";
 				ABSQuery1->ExecSQL();
 				ABSQuery1->Close();
@@ -1363,7 +1369,7 @@ void __fastcall TForm1::Button5Click(TObject *Sender)
 void __fastcall TForm1::NDeleteClick(TObject *Sender)//УДАЛЕНИЕ из ТВ-2
 {
 	//
-	if (MessageDlg("Действительно удалить " + TreeView2->Selected->Text + "?", mtWarning, mbOKCancel,0)==mrOk && TreeView2->Selected->SelectedIndex==2)
+	if (TreeView2->Selected->SelectedIndex==2 && MessageDlg("Действительно удалить " + TreeView2->Selected->Text + "?", mtWarning, mbOKCancel,0)==mrOk)
 	{
 		ABSQuery1->SQL->Clear();
 		ABSQuery1->SQL->Text = "delete from Strukturs_23 where id_strukturs=(select id from Strukturs where id_S2=(select id from Strukt_2 where Naim='"
@@ -1386,10 +1392,11 @@ void __fastcall TForm1::NDeleteClick(TObject *Sender)//УДАЛЕНИЕ из ТВ-2
 	{
 		ABSQuery1->SQL->Clear();
 		ABSQuery1->SQL->Text = "delete from Strukturs_23 where id_strukturs=(select id from Strukturs where id_S2=(select id from Strukt_2 where Naim='"
-		+ TreeView2->Selected->Text + "') and id_Inv=(select id from INV where I_N='"
+		+ TreeView2->Selected->Parent->Text + "') and id_Inv=(select id from INV where I_N='"
 		+ Metka->Text + "') and id_S1=(select id from Strukt where Naim='"
-		+ TreeView2->Selected->Parent->Text + "'))";
-		ABSQuery1->ExecSQL();
+		+ TreeView2->Selected->Parent->Parent->Text + "')) and id_S3=(select id from Strukt_3 where Naim='"
+		+ TreeView2->Selected->Text + "')";
+		ABSQuery1->ExecSQL();       //секретный ингридиент - двойной Parent!
 		ABSQuery1->Close();
 
 		TreeView2->Selected->Delete();
